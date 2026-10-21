@@ -1,0 +1,6 @@
+{
+  "name": "FundFlow - Smart Income & Automatic Fund Allocation",
+  "description": "Smart personal & business finance app that automatically distributes income into target funds by percentage rules, tracks balances, expenses, and growth.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
