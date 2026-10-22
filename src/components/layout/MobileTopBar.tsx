@@ -12,11 +12,14 @@ import { useFinance } from '../../context/FinanceContext.tsx';
 import { DateFilterRange } from '../../types/finance.ts';
 import { NavItemKey } from './Sidebar.tsx';
 
+import { isSupabaseConfigured } from '../../lib/supabase.ts';
+
 interface MobileTopBarProps {
   activeNav: NavItemKey;
   onOpenDateFilter: () => void;
   phoneFrameMode: boolean;
   onTogglePhoneFrame: () => void;
+  onNavigateToSettings: () => void;
 }
 
 export const MobileTopBar: React.FC<MobileTopBarProps> = ({
@@ -24,8 +27,10 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
   onOpenDateFilter,
   phoneFrameMode,
   onTogglePhoneFrame,
+  onNavigateToSettings,
 }) => {
   const { settings, dateFilter, setDateFilter } = useFinance();
+  const isCloudConnected = isSupabaseConfigured();
 
   const navTitles: Record<NavItemKey, string> = {
     dashboard: 'Home',
@@ -51,14 +56,33 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-2.5">
       <div className="flex items-center justify-between gap-2 max-w-md mx-auto">
         {/* Left: User Profile & App Wordmark */}
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs">
             {settings.userName.charAt(0) || 'H'}
           </div>
           <div className="min-w-0">
-            <span className="text-[10px] text-slate-400 font-medium tracking-tight uppercase block truncate">
-              {navTitles[activeNav] || 'FundFlow'}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-slate-400 font-medium tracking-tight uppercase block truncate">
+                {navTitles[activeNav] || 'FundFlow'}
+              </span>
+              {/* Supabase status badge */}
+              <button
+                onClick={onNavigateToSettings}
+                title={isCloudConnected ? 'Supabase Connected' : 'Local Storage Mode - Click to connect Supabase'}
+                className={`flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-semibold transition-colors ${
+                  isCloudConnected
+                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    isCloudConnected ? 'bg-emerald-500' : 'bg-amber-500'
+                  }`}
+                />
+                <span>{isCloudConnected ? 'Supabase' : 'Offline'}</span>
+              </button>
+            </div>
             <h2 className="text-xs font-bold text-slate-900 leading-tight truncate">
               {settings.userName}
             </h2>

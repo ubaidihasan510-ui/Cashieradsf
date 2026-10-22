@@ -207,6 +207,7 @@ const AppContent: React.FC = () => {
           onOpenDateFilter={() => setIsQuickActionOpen(true)}
           phoneFrameMode={phoneFrameMode}
           onTogglePhoneFrame={() => setPhoneFrameMode(!phoneFrameMode)}
+          onNavigateToSettings={() => setActiveNav('settings')}
         />
 
         {/* Scrollable Viewport Content */}

@@ -20,10 +20,14 @@ export function getSupabaseConfig(): SupabaseConfig {
     // Ignore error
   }
 
-  // Fallback to environment variables
+  // Fallback to configured project credentials
   return {
-    url: (import.meta as any).env?.VITE_SUPABASE_URL || '',
-    anonKey: (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '',
+    url:
+      (import.meta as any).env?.VITE_SUPABASE_URL ||
+      'https://lddsrsgvlzxcxidqhlec.supabase.co',
+    anonKey:
+      (import.meta as any).env?.VITE_SUPABASE_ANON_KEY ||
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkZHNyc2d2bHp4Y3hpZHFobGVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1ODQ4NjYsImV4cCI6MjEwODE2MDg2Nn0.guPFRKjY1_aFOdUXPydsI4FYZ6VF8qT6mS_wb8hmB0c',
   };
 }
 
@@ -56,6 +60,16 @@ export function getSupabaseClient(): SupabaseClient | null {
     }
   }
   return supabaseInstance;
+}
+
+export function isSupabaseConfigured(): boolean {
+  const config = getSupabaseConfig();
+  return Boolean(
+    config.url &&
+    config.anonKey &&
+    !config.url.includes('your-project') &&
+    config.url.startsWith('https://')
+  );
 }
 
 export async function testSupabaseConnection(config?: SupabaseConfig): Promise<{
