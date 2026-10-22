@@ -224,3 +224,160 @@ export async function pushStateToSupabase(state: AppState): Promise<{
     return { success: false, error: err.message || 'Error syncing data to Supabase' };
   }
 }
+
+export async function fetchStateFromSupabase(): Promise<{
+  hasData: boolean;
+  state?: {
+    funds: any[];
+    allocationRules: any[];
+    incomeTransactions: any[];
+    expenseTransactions: any[];
+    fundTransfers: any[];
+  };
+  error?: string;
+}> {
+  const client = getSupabaseClient();
+  if (!client) return { hasData: false };
+
+  try {
+    const [fundsRes, rulesRes, incomeRes, expenseRes, transferRes] = await Promise.all([
+      client.from('funds').select('*'),
+      client.from('allocation_rules').select('*'),
+      client.from('income_transactions').select('*').order('date', { ascending: false }),
+      client.from('expense_transactions').select('*').order('date', { ascending: false }),
+      client.from('fund_transfers').select('*').order('date', { ascending: false }),
+    ]);
+
+    if (fundsRes.error) throw fundsRes.error;
+
+    if (!fundsRes.data || fundsRes.data.length === 0) {
+      return { hasData: false };
+    }
+
+    const funds = fundsRes.data.map((f: any) => ({
+      id: f.id,
+      name: f.name,
+      category: f.category,
+      allocationPercentage: Number(f.allocation_percentage),
+      color: f.color,
+      icon: f.icon,
+      currentBalance: Number(f.current_balance),
+      totalAllocated: Number(f.total_allocated),
+      totalSpent: Number(f.total_spent),
+      allowOverdraft: f.allow_overdraft,
+      targetGoal: f.target_goal ? Number(f.target_goal) : undefined,
+      description: f.description,
+      isEmergencyFund: f.is_emergency_fund,
+      isSavingsFund: f.is_savings_fund,
+      createdAt: f.created_at,
+      updatedAt: f.updated_at,
+    }));
+
+    const allocationRules = (rulesRes.data || []).map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      isDefault: r.is_default,
+      items: r.items,
+      createdAt: r.created_at,
+    }));
+
+    const incomeTransactions = (incomeRes.data || []).map((i: any) => ({
+      id: i.id,
+      amount: Number(i.amount),
+      source: i.source,
+      category: i.category,
+      date: i.date,
+      paymentMethod: i.payment_method,
+      description: i.description,
+      ruleId: i.rule_id,
+      ruleName: i.rule_name,
+      isExcludedFromAllocation: i.is_excluded_from_allocation,
+      allocations: i.allocations,
+      unallocatedAmount: Number(i.unallocated_amount),
+      createdAt: i.created_at,
+      updatedAt: i.updated_at,
+    }));
+
+    const expenseTransactions = (expenseRes.data || []).map((e: any) => ({
+      id: e.id,
+      amount: Number(e.amount),
+      title: e.title,
+      category: e.category,
+      date: e.date,
+      paymentMethod: e.payment_method,
+      fundId: e.fund_id,
+      fundName: e.fund_name,
+      description: e.description,
+      createdAt: e.created_at,
+      updatedAt: e.updated_at,
+    }));
+
+    const fundTransfers = (transferRes.data || []).map((t: any) => ({
+      id: t.id,
+      fromFundId: t.from_fund_id,
+      fromFundName: t.from_fund_name,
+      toFundId: t.to_fund_id,
+      toFundName: t.to_fund_name,
+      amount: Number(t.amount),
+      date: t.date,
+      note: t.note,
+      createdAt: t.created_at,
+    }));
+
+    return {
+      hasData: true,
+      state: {
+        funds,
+        allocationRules,
+        incomeTransactions,
+        expenseTransactions,
+        fundTransfers,
+      },
+    };
+  } catch (err: any) {
+    console.error('Error fetching state from Supabase:', err);
+    return { hasData: false, error: err.message };
+  }
+}
+
+/**
+ * Wipes all income, expense and transfer transactions from Supabase and resets fund balances to 0
+ */
+export async function clearSupabaseData(cleanFunds: any[]): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabaseClient();
+  if (!client) return { success: false, error: 'Supabase client not configured' };
+
+  try {
+    // Delete all records from transaction tables (neq id '___' deletes all rows in Supabase)
+    await client.from('expense_transactions').delete().neq('id', '___');
+    await client.from('income_transactions').delete().neq('id', '___');
+    await client.from('fund_transfers').delete().neq('id', '___');
+
+    // Update funds to 0 balance in Supabase
+    if (cleanFunds && cleanFunds.length > 0) {
+      const fundPayloads = cleanFunds.map((f) => ({
+        id: f.id,
+        name: f.name,
+        category: f.category,
+        allocation_percentage: f.allocationPercentage,
+        color: f.color,
+        icon: f.icon,
+        current_balance: 0,
+        total_allocated: 0,
+        total_spent: 0,
+        allow_overdraft: f.allowOverdraft,
+        target_goal: f.targetGoal || null,
+        description: f.description || '',
+        is_emergency_fund: f.isEmergencyFund || false,
+        is_savings_fund: f.isSavingsFund || false,
+        updated_at: new Date().toISOString(),
+      }));
+      await client.from('funds').upsert(fundPayloads);
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('Failed to clear Supabase data:', err);
+    return { success: false, error: err.message };
+  }
+}

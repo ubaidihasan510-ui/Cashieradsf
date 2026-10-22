@@ -39,6 +39,7 @@ export const SettingsView: React.FC = () => {
     unallocatedBalance,
     updateSettings,
     resetToSampleData,
+    clearAllData,
     exportDataJson,
     importDataJson,
     addToast,
@@ -629,11 +630,36 @@ CREATE POLICY "Allow public all access on fund_transfers" ON fund_transfers FOR 
               </div>
             </div>
 
-            {/* Reset to Sample Realistic Data */}
-            <div className="p-4 bg-rose-50/60 rounded-xl border border-rose-200 flex items-center justify-between gap-4">
+            {/* Clear All Transactions (Start Fresh from ৳0) */}
+            <div className="p-4 bg-amber-50/70 rounded-xl border border-amber-200 flex items-center justify-between gap-4">
               <div>
-                <span className="font-bold text-rose-900 block">Reset to Realistic Sample Data</span>
-                <p className="text-rose-700 text-[11px] mt-0.5">
+                <span className="font-bold text-amber-950 block">সব ডেমো ডাটা মুছুন (Start Fresh with ৳0)</span>
+                <p className="text-amber-800 text-[11px] mt-0.5">
+                  সব ডেমো ট্রানজেকশন মুছে ফেলবে এবং প্রতিটি ফান্ডের ব্যালেন্স ৳০ এ সেট করবে। আপনার আসল আয় ও ব্যয়ের হিসাব নতুন করে শুরু করার জন্য এটি ব্যবহার করুন।
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      'আপনি কি সব ডেমো ডাটা মুছে ফ্রেশ ৳০ ব্যালেন্সে শুরু করতে চান?'
+                    )
+                  ) {
+                    clearAllData();
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold rounded-lg shrink-0 shadow-xs transition-all cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>৳০ ক্লিন রিসেট</span>
+              </button>
+            </div>
+
+            {/* Reset to Sample Realistic Data */}
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-4">
+              <div>
+                <span className="font-bold text-slate-800 block">Reset to Sample Data</span>
+                <p className="text-slate-500 text-[11px] mt-0.5">
                   Re-populates the app with sample ৳50,000+ income distributions, realistic expenses,
                   and 6 preconfigured funds.
                 </p>
@@ -642,16 +668,16 @@ CREATE POLICY "Allow public all access on fund_transfers" ON fund_transfers FOR 
                 onClick={() => {
                   if (
                     window.confirm(
-                      'Are you sure you want to reset all data back to initial sample state?'
+                      'Are you sure you want to load sample demo data?'
                     )
                   ) {
                     resetToSampleData();
                   }
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg shrink-0 shadow-xs transition-colors"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg shrink-0 shadow-xs transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
-                <span>Reset Data</span>
+                <span>Load Sample Data</span>
               </button>
             </div>
           </div>

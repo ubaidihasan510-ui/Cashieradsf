@@ -14,6 +14,8 @@ import {
   Plus,
   Sliders,
   ChevronRight,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext.tsx';
 import { formatCurrency, formatDate } from '../../utils/currency.ts';
@@ -42,6 +44,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     unallocatedBalance,
     incomeTransactions,
     expenseTransactions,
+    clearAllData,
   } = useFinance();
 
   // Calculate monthly stats for the last 6 months for trend chart
@@ -74,8 +77,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const recentTransactions = filteredUnifiedTransactions.slice(0, 6);
 
+  const isDemoActive = incomeTransactions.some((t) => t.id === 'inc-1' || t.id === 'inc-2');
+
   return (
-    <div className="space-y-5 pb-16 md:pb-6">
+    <div className="space-y-4 pb-16 md:pb-6">
+      {/* Demo Data Notice & One-Click Clear to 0 */}
+      {isDemoActive && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-amber-500/30 rounded-2xl shadow-xs">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-amber-400">ডেমো ডাটা দেখাচ্ছে (৳৯৮,৭০০)</span>
+                <span className="px-1.5 py-0.5 text-[9px] bg-amber-500/20 text-amber-300 font-semibold rounded-md border border-amber-500/30">
+                  Demo Active
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                আপনার আসল ট্রানজেকশন শুরু করতে ডেমো ডাটা মুছে ফ্রেশ ৳০ ব্যালেন্স করুন।
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => clearAllData()}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition-all shrink-0 cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>ডেমো ডাটা মুছুন (৳০)</span>
+          </button>
+        </div>
+      )}
+
       {/* 1. Mobile Fintech Wallet Hero Card (bKash / Revolut / Apple Card Style) */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 text-white p-6 shadow-xl border border-slate-800">
         {/* Subtle decorative background blur mesh */}

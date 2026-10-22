@@ -24,6 +24,12 @@ import {
   recalculateAllFundBalances,
   saveAppState,
 } from '../utils/storage.ts';
+import {
+  fetchStateFromSupabase,
+  pushStateToSupabase,
+  clearSupabaseData,
+  isSupabaseConfigured,
+} from '../lib/supabase.ts';
 
 export interface ToastMessage {
   id: string;
@@ -139,6 +145,7 @@ interface FinanceContextType {
 
   updateSettings: (newSettings: Partial<AppSettings>) => void;
   resetToSampleData: () => void;
+  clearAllData: () => void;
   exportDataJson: () => string;
   importDataJson: (json: string) => { success: boolean; error?: string };
 }
@@ -154,6 +161,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     saveAppState(state);
   }, [state]);
+
+  // Initial cloud sync with Supabase
+  useEffect(() => {
+    if (isSupabaseConfigured()) {
+      fetchStateFromSupabase().then((res) => {
+        if (res.hasData && res.state) {
+          const { updatedFunds, totalUnallocated } = recalculateAllFundBalances(
+            res.state.funds,
+            res.state.incomeTransactions,
+            res.state.expenseTransactions,
+            res.state.fundTransfers
+          );
+          setState((prev) => ({
+            ...prev,
+            funds: updatedFunds,
+            allocationRules: res.state?.allocationRules?.length ? res.state.allocationRules : prev.allocationRules,
+            incomeTransactions: res.state?.incomeTransactions || [],
+            expenseTransactions: res.state?.expenseTransactions || [],
+            fundTransfers: res.state?.fundTransfers || [],
+            unallocatedBalance: totalUnallocated,
+            lastUpdated: new Date().toISOString(),
+          }));
+        } else {
+          // Seed new tables in Supabase with initial data
+          pushStateToSupabase(state).catch(() => {});
+        }
+      });
+    }
+  }, []);
 
   const addToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -183,7 +219,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       newTransfers
     );
 
-    setState({
+    const nextState: AppState = {
       funds: updatedFunds,
       incomeTransactions: newIncomes,
       expenseTransactions: newExpenses,
@@ -192,7 +228,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       settings: newSettings,
       unallocatedBalance: totalUnallocated,
       lastUpdated: new Date().toISOString(),
-    });
+    };
+
+    setState(nextState);
+
+    // Asynchronously push update to Supabase in background
+    if (isSupabaseConfigured()) {
+      pushStateToSupabase(nextState).catch((err) => {
+        console.warn('Background Supabase sync notice:', err);
+      });
+    }
   };
 
   // ADD INCOME
@@ -679,6 +724,39 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addToast('Reset to realistic sample financial data', 'info');
   };
 
+  // CLEAR ALL DEMO DATA & START FRESH WITH 0
+  const clearAllData = async () => {
+    const zeroFunds: Fund[] = state.funds.map((f) => ({
+      ...f,
+      currentBalance: 0,
+      totalAllocated: 0,
+      totalSpent: 0,
+      updatedAt: new Date().toISOString(),
+    }));
+
+    const cleanState: AppState = {
+      funds: zeroFunds,
+      incomeTransactions: [],
+      expenseTransactions: [],
+      fundTransfers: [],
+      allocationRules: state.allocationRules,
+      settings: state.settings,
+      unallocatedBalance: 0,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    setState(cleanState);
+    saveAppState(cleanState);
+
+    if (isSupabaseConfigured()) {
+      clearSupabaseData(zeroFunds).catch((err) => {
+        console.error('Failed to clear Supabase cloud data:', err);
+      });
+    }
+
+    addToast('সব ডেমো ডাটা মুছে ফেলা হয়েছে! ব্যালেন্স এখন ৳০। আপনার আসল আয় ও ব্যয় যোগ করা শুরু করুন।', 'success');
+  };
+
   // EXPORT / IMPORT
   const exportDataJson = (): string => {
     return JSON.stringify(state, null, 2);
@@ -881,6 +959,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteAllocationRule,
         updateSettings,
         resetToSampleData,
+        clearAllData,
         exportDataJson,
         importDataJson,
       }}
